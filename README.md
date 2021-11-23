@@ -1,1 +1,2 @@
 # 15112TermProject
+This project is for my 15-112 (Foundations of Computer Programming) class. This project impliments openCV in order to map a users body on to a 2d screen and allow them to juggle a soccer ball. This is designed entirely in python and tkinter.The most algorithmically complex parts of this project involve the 

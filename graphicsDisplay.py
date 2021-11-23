@@ -46,8 +46,7 @@ def appStarted(app):
   app.platformerBackground = app.loadImage('oldTraffordImage.jpg')
   app.headCenter=[]
   app.ball=Ball(cx=int(app.width*(5/6)),cy=30)
-  app.ballImage=app.loadImage('soccerBall.jpg')
-  app.collisions=0
+  app.score=0
   app.dictOfLines=lowerBodyGraph
   app.timeSinceCollision=0
   app.timerDelay=0
@@ -56,9 +55,12 @@ def appStarted(app):
   app.gameOver=False
   app.balls=[]
 
+
+#Goes through all of the openCV functions each camerafired
 def cameraFired(app):
   if(app.inGame):
-    cap = cv2.VideoCapture(0)
+    #If statement loop cited from: https://google.github.io/mediapipe/solutions/pose.html
+    cap = app.camera
     with mp_pose.Pose(
         min_detection_confidence=0.5,
         min_tracking_confidence=0.5) as pose:
@@ -108,13 +110,13 @@ def ballOnLine(app):
   for node in app.dictOfLines:
     for connection in app.dictOfLines[node]:
       if(isBetweenPoints(app,node,connection) and isOnLine(app,node,connection)):
-        print("Yaya")
         return node,connection
   return
 
+#Checks if the ball is within the bounds of the slope of a line
 def isOnLine(app,node1,node2):
   #strictness of collision(angle in degrees)
-  epsilon=20
+  epsilon=45
   point1=np.array([app.lowerBodyCoords[node1][0],app.lowerBodyCoords[node1][1]])
   point2=np.array([app.lowerBodyCoords[node2][0],app.lowerBodyCoords[node2][1]])
   point3=np.array([app.ball.cx,app.ball.cy])
@@ -126,16 +128,9 @@ def isOnLine(app,node1,node2):
   if(distanceToLine<epsilon):
     return True
   return False
-
-
-#Old Helper Function for detection collisions
-# def slopeBetweenNodes(app,node1,node2):
-#   dy=app.lowerBodyCoords[node1][1]-app.lowerBodyCoords[node2][1]
-#   dx=app.lowerBodyCoords[node1][0]-app.lowerBodyCoords[node2][0]
-#   return abs(dy/dx)
   
   
-
+#Checks if a ball is within the bounding box two points
 def isBetweenPoints(app,node1,node2):
   rightBound=max(app.lowerBodyCoords[node1][0],app.lowerBodyCoords[node2][0])
   leftBound=min(app.lowerBodyCoords[node1][0],app.lowerBodyCoords[node2][0])
@@ -147,16 +142,21 @@ def isBetweenPoints(app,node1,node2):
     return False
   return True
 
+#Checks if there is a collision with the wall
 def collisionWithWall(app):
-  if(app.ball.cx+20>app.width or app.ball.cy<0
-    or app.ball.cx-20<0):
+  if(app.ball.cx+40>app.width or app.ball.cy<0
+    or app.ball.cx-40<0):
     return True
+
+
 ########################################################################
 ########################################################################
 
+#Distance between two points helper function
 def distance(x0,y0,x1,y1):
   return math.sqrt((x0-x1)**2+(y0-y1)**2)
   
+#Places the lower body coordinates into a list of indexes
 def extractLowerBodyCoords(app):
   lowerBodyCoords=[23,24,25,26,27,28,29,30,31,32]
   result=[]
@@ -164,31 +164,34 @@ def extractLowerBodyCoords(app):
     result.append(s)
   return result
 
-
+#Places the upper body coordinates into a list of indexes
 def extractUpperBodyCoords(app):
   result=[0]
   for i in range(11,23):
     result.append(i)
   return result
 
+#Changes the y velocity of the ball being kicked
 def doGravity(app):
   app.ball.dy-=1.2
   for b in app.balls:
     b.dy-=1.2
 
+#Moves the ball which is being kicked by the player
 def moveBall(app):
   app.ball.cy-=app.ball.dy
   app.ball.cx+=app.ball.dx
-  if(collisionWithWall(app) and app.timeSinceCollision>3):
+  if(collisionWithWall(app) and app.timeSinceCollision>30):
       app.ball.cy+=app.ball.dy
       app.ball.cx+=app.ball.dx
       app.timeSinceCollision=0
       app.ball.dx*=-0.9
   doGravity(app)
 
+
 def timerFired(app):
   if(app.welcomeScreen):
-    randomIndex=random.randint(1,600)
+    randomIndex=random.randint(1,1150)
     newBall=Ball(cx=randomIndex,cy=0)
     app.balls.append(newBall)
     moveBalls(app)
@@ -199,10 +202,9 @@ def timerFired(app):
   if(app.ball.cy>app.height):
     app.gameOver=True
     app.inGame=False
-    app.collisions=0
-    randomIndex=random.randint(1,600)
+    randomIndex=random.randint(1,1150)
     app.ball=Ball(cx=randomIndex,cy=30)
-  if(app.bodyLandmarks):
+  if(app.bodyLandmarks and app.inGame):
     #Setting LowerBody Coordinates
     lowerBodyCoords=extractLowerBodyCoords(app)
     app.lowerBodyCoords=[]
@@ -217,28 +219,30 @@ def timerFired(app):
       app.upperBodyCoords.append(tempCord)
     moveBall(app)
     linePoints=collisionWithLeg(app)
-    if(linePoints):
-      print("It worked!!!")
-      app.collisions+=1
+    if(linePoints and app.timeSinceCollision):
+      app.score+=1
       colideWithWall(app,linePoints[0],linePoints[1])
 
+#Moves the balls in the welcome screen
 def moveBalls(app):
   for b in app.balls:
     b.cy-=b.dy
     b.cx-=b.dx
   doBallsGravity(app)
 
+#Removes the balls which fall off the screen
 def removeBalls(app):
   for b in app.balls:
     if(b.cy>app.height):
       app.balls.remove(b)
 
+#Adds changing velocity to the balls at the start
 def doBallsGravity(app):
   for b in app.balls:
     b.dy-=1.2
   
   
-
+#Checks for key presses which change the game mode
 def keyPressed(app,event):
   if(app.welcomeScreen):
     if(event.key):
@@ -248,7 +252,9 @@ def keyPressed(app,event):
     if(event.key=="r"):
       app.inGame=True
       app.gameOver=False
+      app.score=0
 
+#Changes the vector of the ball after it colides with leg
 def colideWithWall(app,node1,node2):
     point1=(app.lowerBodyCoords[node1][0],app.lowerBodyCoords[node1][1])
     point2=(app.lowerBodyCoords[node2][0],app.lowerBodyCoords[node2][1])
@@ -257,22 +263,25 @@ def colideWithWall(app,node1,node2):
     normalizedVec=rotateVector(ballVec,angleOfLine)
     normalizedOutputVec=rotateVector(normalizedVec,2*math.pi-2*angleOfLine)
     outputVec=rotateVector(normalizedOutputVec,-1*angleOfLine)
-    app.ball.dx=int(-0.9*outputVec[0])
-    app.ball.dy=int(-0.9*outputVec[1])
+    app.ball.dx=int(-1*outputVec[0])
+    app.ball.dy=int(-1*outputVec[1])
 
+#Used in calculating the return vector angle
 def rotateVector(vector,angle):
     rotationArray=np.array([[math.cos(angle),-1*math.sin(angle)],[math.sin(angle),math.cos(angle)]])
     newVec=np.matmul(rotationArray,vector)
     return newVec
 
+#Finds the angle between two points
 def findAngle(point1,point2):
     slope=(point2[1]-point1[1])/(point2[0]-point1[0])
     return math.atan(slope)
     
 
     
-
+#Contains all of the drawing funcitons
 def redrawAll(app,canvas):
+  print(app.timeSinceCollision)
   # app.drawCamera(canvas)
   #Test Code for line betweeen Knees
   # if(len(app.lowerBodyCoords)>0):
@@ -290,50 +299,49 @@ def redrawAll(app,canvas):
   if(app.gameOver):
     drawGameOver(app,canvas)
 
+#Draws the game over screen
 def drawGameOver(app,canvas):
   drawBackground(app,canvas)
-  canvas.create_text(app.width//2,app.height//2,text="Game Over",font="Arial 50 bold",fill="white")
-  canvas.create_text(app.width//2,app.height//2+50,text="press r to begin",font="Arial 20 bold",fill="white")
+  canvas.create_text(app.width//2,app.height//2,text="Game Over",font="Arial 90 bold",fill="white")
+  canvas.create_text(app.width//2,app.height//2+50,text="press r to begin",font="Arial 30 bold",fill="white")
+  canvas.create_text(app.width//2,app.height//2+80,text=f"Score: {app.score}",font="Arial 30 bold",fill="white")
 
-
+#Draws the initial welcome screen
 def drawWelcomeScreen(app,canvas):
   drawBackground(app,canvas)
-  canvas.create_text(app.width//2,app.height//2,text="Welcome to Real Soccer!",font="Arial 50 bold",fill="white")
-  canvas.create_text(app.width//2,app.height//2+50,text="press any key to begin",font="Arial 20 bold",fill="white")
+  canvas.create_text(app.width//2,app.height//2,text="Welcome to Real Soccer!",font="Arial 90 bold",fill="white")
+  canvas.create_text(app.width//2,app.height//2+50,text="press any key to begin",font="Arial 30 bold",fill="white")
   drawFallingBalls(app,canvas)
 
+#Draws the balls that fall during the welcome screen
 def drawFallingBalls(app,canvas):
   for b in app.balls:
     canvas.create_oval(b.cx-b.r,b.cy-b.r,b.cx+b.r,b.cy+b.r,fill="blue")
 
-
+#Draws the score in the top left
 def drawScore(app,canvas):
-    canvas.create_text(80,40,text=f"Score: {app.collisions}",font="Arial 15 bold",fill="white")
+    canvas.create_text(80,40,text=f"Score: {app.score}",font="Arial 15 bold",fill="white")
   
-
+#Draws the ball which is being juggled by the player
 def drawBall(app,canvas):
   canvas.create_oval(app.ball.cx-20,app.ball.cy-20,app.ball.cx+20,app.ball.cy+20,fill="white")
 
 
-  
+#Draws the players head
 def drawHead(app,canvas):
-  lineWidth=10
+  lineWidth=20
   cx,cy=app.upperBodyCoords[0]
   radius=abs(app.upperBodyCoords[1][1]-cy)
-  canvas.create_oval(cx-radius,cy-radius,cx+radius,cy+radius,width=lineWidth,outline='black')
-  drawSmileyFace(app,canvas,cx,cy,radius)
-  
-#Drawing the face
-def drawSmileyFace(app,canvas,cx,cy,radius):
-  pass
+  canvas.create_oval(cx-radius,cy-radius,cx+radius,cy+radius,width=lineWidth,outline='pink')
 
-
+#Draws the head of the player
 def drawBackground(app,canvas):
   canvas.create_image(app.width/2, app.height/2, image=ImageTk.PhotoImage(app.platformerBackground))
 
-
+#Draws the entire lower body
 def drawLowerBody(app,canvas):
-  lineWidth=10
+  lineWidth=20
+
   #Draw Waist Line
   canvas.create_line(app.lowerBodyCoords[0][0],app.lowerBodyCoords[0][1],app.lowerBodyCoords[1][0],app.lowerBodyCoords[1][1],fill="pink",width=lineWidth)
 
@@ -369,7 +377,7 @@ def drawLowerBody(app,canvas):
 
 
 def drawUpperBody(app,canvas):
-  lineWidth=10
+  lineWidth=20
   #Torso
   canvas.create_line(app.upperBodyCoords[1][0],app.upperBodyCoords[1][1],app.upperBodyCoords[2][0],app.upperBodyCoords[2][1],fill="pink",width=lineWidth)
   canvas.create_line(app.lowerBodyCoords[1][0],app.lowerBodyCoords[1][1],app.upperBodyCoords[2][0],app.upperBodyCoords[2][1],fill="pink",width=lineWidth)
@@ -406,4 +414,4 @@ def drawUpperBody(app,canvas):
   canvas.create_line(app.upperBodyCoords[6][0],app.upperBodyCoords[6][1],app.upperBodyCoords[12][0],app.upperBodyCoords[12][1],fill="pink",width=lineWidth)
 
 
-runApp(width=615, height=409)
+runApp(width=1200, height=900)

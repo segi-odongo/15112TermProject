@@ -40,20 +40,39 @@ lowerBodyGraph[9]={7,5}
 
 
 def appStarted(app):
+  #openCV Landmark Variables
   app.bodyLandmarks=None
   app.lowerBodyCoords=[]
   app.upperBodyCoords=[]
-  app.platformerBackground = app.loadImage('oldTraffordImage.jpg')
+
+  #Backgrounds
+  app.oldTraffordBackground = (app.loadImage('oldTraffordImage.jpg'),"Old Trafford")
+  app.santiagoBernabeauBackground=(app.loadImage('santiagoBernabeuImage.jpg'),"Santiago Bernabeu")
+  app.allianzArenaBackground=(app.loadImage('allianzArenaImage.jpg'),"Allianz Arena")
+  app.neoQuimicaBackground=(app.loadImage('neoQuimicaImage.jpg'), "Neo Quimica Arena")
+  app.anfieldBackground=(app.loadImage('anfieldImage.jpg'),"Anfield")
+  app.background=app.oldTraffordBackground
   app.headCenter=[]
   app.ball=Ball(cx=int(app.width*(5/6)),cy=30)
   app.score=0
+
+  #Dictionary that maps each node to every connecting node it has
   app.dictOfLines=lowerBodyGraph
+
   app.timeSinceCollision=0
   app.timerDelay=0
+
+  #Game Mode Variables
   app.welcomeScreen=True
   app.inGame=False
   app.gameOver=False
+  app.inSettings=False
+  app.difficulty="Easy"
+  app.gravity=1.2
+
+  #List for balls that fall during animation
   app.balls=[]
+
 
 
 #Goes through all of the openCV functions each camerafired
@@ -173,7 +192,7 @@ def extractUpperBodyCoords(app):
 
 #Changes the y velocity of the ball being kicked
 def doGravity(app):
-  app.ball.dy-=1.2
+  app.ball.dy-=app.gravity
   for b in app.balls:
     b.dy-=1.2
 
@@ -245,14 +264,52 @@ def doBallsGravity(app):
 #Checks for key presses which change the game mode
 def keyPressed(app,event):
   if(app.welcomeScreen):
-    if(event.key):
+    if(event.key=="Space"):
       app.welcomeScreen=False
       app.inGame=True
+    if(event.key=="s"):
+      app.inSettings=True
+      app.welcomeScreen=False
   if(app.gameOver):
     if(event.key=="r"):
       app.inGame=True
       app.gameOver=False
       app.score=0
+    if(event.key=="s"):
+      app.gameOver=False
+      app.inSettings=True
+  if(app.inSettings):
+    if(event.key=="q"):
+      app.welcomeScreen=True
+      app.inSettings=False
+    if(event.key=="d"):
+      toggleDifficulty(app)
+    if(event.key=="b"):
+      toggleBackground(app)
+  
+def toggleDifficulty(app):
+  if(app.difficulty=="Easy"):
+    app.difficulty="Medium"
+    app.gravity=2.3
+  elif(app.difficulty=="Medium"):
+    app.difficulty="Hard"
+    app.gravity=3.1
+  elif(app.difficulty=="Hard"):
+    app.difficulty="Easy"
+    app.gravity=1.2
+
+def toggleBackground(app):
+  if(app.background[1]=="Old Trafford"):
+    app.background=app.santiagoBernabeauBackground
+  elif(app.background[1]=="Santiago Bernabeu"):
+    app.background=app.allianzArenaBackground
+  elif(app.background[1]=="Allianz Arena"):
+    app.background=app.neoQuimicaBackground
+  elif(app.background[1]=="Neo Quimica Arena"):
+    app.background=app.anfieldBackground
+  elif(app.background[1]=="Anfield"):
+    app.background=app.oldTraffordBackground
+
 
 #Changes the vector of the ball after it colides with leg
 def colideWithWall(app,node1,node2):
@@ -281,7 +338,7 @@ def findAngle(point1,point2):
     
 #Contains all of the drawing funcitons
 def redrawAll(app,canvas):
-  print(app.timeSinceCollision)
+  print(app.difficulty)
   # app.drawCamera(canvas)
   #Test Code for line betweeen Knees
   # if(len(app.lowerBodyCoords)>0):
@@ -298,25 +355,35 @@ def redrawAll(app,canvas):
     drawWelcomeScreen(app,canvas)
   if(app.gameOver):
     drawGameOver(app,canvas)
+  if(app.inSettings):
+    drawSettings(app,canvas)
+
+def drawSettings(app,canvas):
+  drawBackground(app,canvas)
+  canvas.create_text(app.width//2,app.height//6,text=f"Difficulty is currently at {app.difficulty} press d to toggle",font="Arial 30 bold",fill="blue violet")
+  canvas.create_text(app.width//2,app.height//3,text=f"Current stadium backgorund is {app.background[1]} press b to toggle", font="Arial 30 bold",fill="blue violet")
+  canvas.create_text(app.width//6,app.height//10,text="press q to return to welcome screen",font="Arial 20 bold",fill="blue violet")
 
 #Draws the game over screen
 def drawGameOver(app,canvas):
   drawBackground(app,canvas)
+  canvas.create_text(app.width//5,app.height//5,text="press s for settings",font="Arial 30 bold",fill="white")
   canvas.create_text(app.width//2,app.height//2,text="Game Over",font="Arial 90 bold",fill="white")
-  canvas.create_text(app.width//2,app.height//2+50,text="press r to begin",font="Arial 30 bold",fill="white")
+  canvas.create_text(app.width//2,app.height//2+50,text="press r to restart",font="Arial 30 bold",fill="white")
   canvas.create_text(app.width//2,app.height//2+80,text=f"Score: {app.score}",font="Arial 30 bold",fill="white")
 
 #Draws the initial welcome screen
 def drawWelcomeScreen(app,canvas):
   drawBackground(app,canvas)
   canvas.create_text(app.width//2,app.height//2,text="Welcome to Real Soccer!",font="Arial 90 bold",fill="white")
-  canvas.create_text(app.width//2,app.height//2+50,text="press any key to begin",font="Arial 30 bold",fill="white")
+  canvas.create_text(app.width//2,app.height//2+50,text="press space to begin",font="Arial 30 bold",fill="white")
+  canvas.create_text(app.width//5,app.height//5,text="press s for settings",font="Arial 30 bold",fill="white")
   drawFallingBalls(app,canvas)
 
 #Draws the balls that fall during the welcome screen
 def drawFallingBalls(app,canvas):
   for b in app.balls:
-    canvas.create_oval(b.cx-b.r,b.cy-b.r,b.cx+b.r,b.cy+b.r,fill="blue")
+    canvas.create_oval(b.cx-b.r,b.cy-b.r,b.cx+b.r,b.cy+b.r,fill="white")
 
 #Draws the score in the top left
 def drawScore(app,canvas):
@@ -324,7 +391,7 @@ def drawScore(app,canvas):
   
 #Draws the ball which is being juggled by the player
 def drawBall(app,canvas):
-  canvas.create_oval(app.ball.cx-20,app.ball.cy-20,app.ball.cx+20,app.ball.cy+20,fill="white")
+  canvas.create_oval(app.ball.cx-40,app.ball.cy-40,app.ball.cx+40,app.ball.cy+40,fill="white")
 
 
 #Draws the players head
@@ -332,18 +399,18 @@ def drawHead(app,canvas):
   lineWidth=20
   cx,cy=app.upperBodyCoords[0]
   radius=abs(app.upperBodyCoords[1][1]-cy)
-  canvas.create_oval(cx-radius,cy-radius,cx+radius,cy+radius,width=lineWidth,outline='pink')
+  canvas.create_oval(cx-radius,cy-radius,cx+radius,cy+radius,width=lineWidth,outline='blue violet')
 
 #Draws the head of the player
 def drawBackground(app,canvas):
-  canvas.create_image(app.width/2, app.height/2, image=ImageTk.PhotoImage(app.platformerBackground))
+  canvas.create_image(app.width/2, app.height/2, image=ImageTk.PhotoImage(app.background[0]))
 
 #Draws the entire lower body
 def drawLowerBody(app,canvas):
   lineWidth=20
 
   #Draw Waist Line
-  canvas.create_line(app.lowerBodyCoords[0][0],app.lowerBodyCoords[0][1],app.lowerBodyCoords[1][0],app.lowerBodyCoords[1][1],fill="pink",width=lineWidth)
+  canvas.create_line(app.lowerBodyCoords[0][0],app.lowerBodyCoords[0][1],app.lowerBodyCoords[1][0],app.lowerBodyCoords[1][1],fill="blue violet",width=lineWidth)
 
 
 ############################################################################
@@ -351,67 +418,67 @@ def drawLowerBody(app,canvas):
 ###########################################################################
 
 #Upper Leg
-  canvas.create_line(app.lowerBodyCoords[0][0],app.lowerBodyCoords[0][1],app.lowerBodyCoords[2][0],app.lowerBodyCoords[2][1],fill="pink",width=lineWidth)
+  canvas.create_line(app.lowerBodyCoords[0][0],app.lowerBodyCoords[0][1],app.lowerBodyCoords[2][0],app.lowerBodyCoords[2][1],fill="blue violet",width=lineWidth)
 
 #Lower Leg
-  canvas.create_line(app.lowerBodyCoords[2][0],app.lowerBodyCoords[2][1],app.lowerBodyCoords[4][0],app.lowerBodyCoords[4][1],fill="pink",width=lineWidth)
+  canvas.create_line(app.lowerBodyCoords[2][0],app.lowerBodyCoords[2][1],app.lowerBodyCoords[4][0],app.lowerBodyCoords[4][1],fill="blue violet",width=lineWidth)
 
 #Foot
-  canvas.create_line(app.lowerBodyCoords[4][0],app.lowerBodyCoords[4][1],app.lowerBodyCoords[8][0],app.lowerBodyCoords[8][1],fill="pink",width=lineWidth)
-  canvas.create_line(app.lowerBodyCoords[4][0],app.lowerBodyCoords[4][1],app.lowerBodyCoords[6][0],app.lowerBodyCoords[6][1],fill="pink",width=lineWidth)
-  canvas.create_line(app.lowerBodyCoords[8][0],app.lowerBodyCoords[8][1],app.lowerBodyCoords[6][0],app.lowerBodyCoords[6][1],fill="pink",width=lineWidth)
+  canvas.create_line(app.lowerBodyCoords[4][0],app.lowerBodyCoords[4][1],app.lowerBodyCoords[8][0],app.lowerBodyCoords[8][1],fill="blue violet",width=lineWidth)
+  canvas.create_line(app.lowerBodyCoords[4][0],app.lowerBodyCoords[4][1],app.lowerBodyCoords[6][0],app.lowerBodyCoords[6][1],fill="blue violet",width=lineWidth)
+  canvas.create_line(app.lowerBodyCoords[8][0],app.lowerBodyCoords[8][1],app.lowerBodyCoords[6][0],app.lowerBodyCoords[6][1],fill="blue violet",width=lineWidth)
 
 ###########################################################################
   # #Draw Right Leg
 ###########################################################################
 #Upper Leg
-  canvas.create_line(app.lowerBodyCoords[1][0],app.lowerBodyCoords[1][1],app.lowerBodyCoords[3][0],app.lowerBodyCoords[3][1],fill="pink",width=lineWidth)
+  canvas.create_line(app.lowerBodyCoords[1][0],app.lowerBodyCoords[1][1],app.lowerBodyCoords[3][0],app.lowerBodyCoords[3][1],fill="blue violet",width=lineWidth)
 
 #Lower Leg
-  canvas.create_line(app.lowerBodyCoords[3][0],app.lowerBodyCoords[3][1],app.lowerBodyCoords[5][0],app.lowerBodyCoords[5][1],fill="pink",width=lineWidth)
+  canvas.create_line(app.lowerBodyCoords[3][0],app.lowerBodyCoords[3][1],app.lowerBodyCoords[5][0],app.lowerBodyCoords[5][1],fill="blue violet",width=lineWidth)
 
 #Foot
-  canvas.create_line(app.lowerBodyCoords[5][0],app.lowerBodyCoords[5][1],app.lowerBodyCoords[9][0],app.lowerBodyCoords[9][1],fill="pink",width=lineWidth)
-  canvas.create_line(app.lowerBodyCoords[5][0],app.lowerBodyCoords[5][1],app.lowerBodyCoords[7][0],app.lowerBodyCoords[7][1],fill="pink",width=lineWidth)
-  canvas.create_line(app.lowerBodyCoords[9][0],app.lowerBodyCoords[9][1],app.lowerBodyCoords[7][0],app.lowerBodyCoords[7][1],fill="pink",width=lineWidth)
+  canvas.create_line(app.lowerBodyCoords[5][0],app.lowerBodyCoords[5][1],app.lowerBodyCoords[9][0],app.lowerBodyCoords[9][1],fill="blue violet",width=lineWidth)
+  canvas.create_line(app.lowerBodyCoords[5][0],app.lowerBodyCoords[5][1],app.lowerBodyCoords[7][0],app.lowerBodyCoords[7][1],fill="blue violet",width=lineWidth)
+  canvas.create_line(app.lowerBodyCoords[9][0],app.lowerBodyCoords[9][1],app.lowerBodyCoords[7][0],app.lowerBodyCoords[7][1],fill="blue violet",width=lineWidth)
 
 
 def drawUpperBody(app,canvas):
   lineWidth=20
   #Torso
-  canvas.create_line(app.upperBodyCoords[1][0],app.upperBodyCoords[1][1],app.upperBodyCoords[2][0],app.upperBodyCoords[2][1],fill="pink",width=lineWidth)
-  canvas.create_line(app.lowerBodyCoords[1][0],app.lowerBodyCoords[1][1],app.upperBodyCoords[2][0],app.upperBodyCoords[2][1],fill="pink",width=lineWidth)
-  canvas.create_line(app.lowerBodyCoords[0][0],app.lowerBodyCoords[0][1],app.upperBodyCoords[1][0],app.upperBodyCoords[1][1],fill="pink",width=lineWidth)
+  canvas.create_line(app.upperBodyCoords[1][0],app.upperBodyCoords[1][1],app.upperBodyCoords[2][0],app.upperBodyCoords[2][1],fill="blue violet",width=lineWidth)
+  canvas.create_line(app.lowerBodyCoords[1][0],app.lowerBodyCoords[1][1],app.upperBodyCoords[2][0],app.upperBodyCoords[2][1],fill="blue violet",width=lineWidth)
+  canvas.create_line(app.lowerBodyCoords[0][0],app.lowerBodyCoords[0][1],app.upperBodyCoords[1][0],app.upperBodyCoords[1][1],fill="blue violet",width=lineWidth)
   
   ###########################################################################
   # #Draw Left Arm
   ###########################################################################
   #Upper Arm
-  canvas.create_line(app.upperBodyCoords[1][0],app.upperBodyCoords[1][1],app.upperBodyCoords[3][0],app.upperBodyCoords[3][1],fill="pink",width=lineWidth)
+  canvas.create_line(app.upperBodyCoords[1][0],app.upperBodyCoords[1][1],app.upperBodyCoords[3][0],app.upperBodyCoords[3][1],fill="blue violet",width=lineWidth)
 
   #Lower Arm
-  canvas.create_line(app.upperBodyCoords[5][0],app.upperBodyCoords[5][1],app.upperBodyCoords[3][0],app.upperBodyCoords[3][1],fill="pink",width=lineWidth)
+  canvas.create_line(app.upperBodyCoords[5][0],app.upperBodyCoords[5][1],app.upperBodyCoords[3][0],app.upperBodyCoords[3][1],fill="blue violet",width=lineWidth)
 
   #Right Hand
-  canvas.create_line(app.upperBodyCoords[5][0],app.upperBodyCoords[5][1],app.upperBodyCoords[7][0],app.upperBodyCoords[7][1],fill="pink",width=lineWidth)
-  canvas.create_line(app.upperBodyCoords[7][0],app.upperBodyCoords[7][1],app.upperBodyCoords[9][0],app.upperBodyCoords[9][1],fill="pink",width=lineWidth)
-  canvas.create_line(app.upperBodyCoords[5][0],app.upperBodyCoords[5][1],app.upperBodyCoords[9][0],app.upperBodyCoords[9][1],fill="pink",width=lineWidth)
-  canvas.create_line(app.upperBodyCoords[5][0],app.upperBodyCoords[5][1],app.upperBodyCoords[11][0],app.upperBodyCoords[11][1],fill="pink",width=lineWidth)
+  canvas.create_line(app.upperBodyCoords[5][0],app.upperBodyCoords[5][1],app.upperBodyCoords[7][0],app.upperBodyCoords[7][1],fill="blue violet",width=lineWidth)
+  canvas.create_line(app.upperBodyCoords[7][0],app.upperBodyCoords[7][1],app.upperBodyCoords[9][0],app.upperBodyCoords[9][1],fill="blue violet",width=lineWidth)
+  canvas.create_line(app.upperBodyCoords[5][0],app.upperBodyCoords[5][1],app.upperBodyCoords[9][0],app.upperBodyCoords[9][1],fill="blue violet",width=lineWidth)
+  canvas.create_line(app.upperBodyCoords[5][0],app.upperBodyCoords[5][1],app.upperBodyCoords[11][0],app.upperBodyCoords[11][1],fill="blue violet",width=lineWidth)
 
 ###########################################################################
   # #Draw Right Arm
 ###########################################################################
 #Upper Arm
-  canvas.create_line(app.upperBodyCoords[2][0],app.upperBodyCoords[2][1],app.upperBodyCoords[4][0],app.upperBodyCoords[4][1],fill="pink",width=lineWidth)
+  canvas.create_line(app.upperBodyCoords[2][0],app.upperBodyCoords[2][1],app.upperBodyCoords[4][0],app.upperBodyCoords[4][1],fill="blue violet",width=lineWidth)
 
   #Lower Arm
-  canvas.create_line(app.upperBodyCoords[6][0],app.upperBodyCoords[6][1],app.upperBodyCoords[4][0],app.upperBodyCoords[4][1],fill="pink",width=lineWidth)
+  canvas.create_line(app.upperBodyCoords[6][0],app.upperBodyCoords[6][1],app.upperBodyCoords[4][0],app.upperBodyCoords[4][1],fill="blue violet",width=lineWidth)
 
   #Right Hand
-  canvas.create_line(app.upperBodyCoords[6][0],app.upperBodyCoords[6][1],app.upperBodyCoords[8][0],app.upperBodyCoords[8][1],fill="pink",width=lineWidth)
-  canvas.create_line(app.upperBodyCoords[8][0],app.upperBodyCoords[8][1],app.upperBodyCoords[10][0],app.upperBodyCoords[10][1],fill="pink",width=lineWidth)
-  canvas.create_line(app.upperBodyCoords[6][0],app.upperBodyCoords[6][1],app.upperBodyCoords[10][0],app.upperBodyCoords[10][1],fill="pink",width=lineWidth)
-  canvas.create_line(app.upperBodyCoords[6][0],app.upperBodyCoords[6][1],app.upperBodyCoords[12][0],app.upperBodyCoords[12][1],fill="pink",width=lineWidth)
+  canvas.create_line(app.upperBodyCoords[6][0],app.upperBodyCoords[6][1],app.upperBodyCoords[8][0],app.upperBodyCoords[8][1],fill="blue violet",width=lineWidth)
+  canvas.create_line(app.upperBodyCoords[8][0],app.upperBodyCoords[8][1],app.upperBodyCoords[10][0],app.upperBodyCoords[10][1],fill="blue violet",width=lineWidth)
+  canvas.create_line(app.upperBodyCoords[6][0],app.upperBodyCoords[6][1],app.upperBodyCoords[10][0],app.upperBodyCoords[10][1],fill="blue violet",width=lineWidth)
+  canvas.create_line(app.upperBodyCoords[6][0],app.upperBodyCoords[6][1],app.upperBodyCoords[12][0],app.upperBodyCoords[12][1],fill="blue violet",width=lineWidth)
 
 
 runApp(width=1200, height=900)

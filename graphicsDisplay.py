@@ -1,3 +1,4 @@
+#This is the main file which runs the soccer game
 import mediapipe as mp
 import math,random,copy,time
 
@@ -52,8 +53,13 @@ def appStarted(app):
   app.neoQuimicaBackground=(app.loadImage('neoQuimicaImage.jpg'), "Neo Quimica Arena")
   app.anfieldBackground=(app.loadImage('anfieldImage.jpg'),"Anfield")
   app.background=app.oldTraffordBackground
+
+  #Creates the head cx and cy
   app.headCenter=[]
-  app.ball=Ball(cx=int(app.width*(5/6)),cy=30)
+
+  #Creates ball that is juggled
+  randomIndex=random.randint(1,1150)
+  app.ball=Ball(cx=randomIndex,cy=30)
   app.score=0
 
   #Dictionary that maps each node to every connecting node it has
@@ -69,6 +75,7 @@ def appStarted(app):
   app.inSettings=False
   app.difficulty="Easy"
   app.gravity=1.2
+  app.bounceSpeed=1
 
   #List for balls that fall during animation
   app.balls=[]
@@ -135,7 +142,7 @@ def ballOnLine(app):
 #Checks if the ball is within the bounds of the slope of a line
 def isOnLine(app,node1,node2):
   #strictness of collision(angle in degrees)
-  epsilon=45
+  epsilon=60
   point1=np.array([app.lowerBodyCoords[node1][0],app.lowerBodyCoords[node1][1]])
   point2=np.array([app.lowerBodyCoords[node2][0],app.lowerBodyCoords[node2][1]])
   point3=np.array([app.ball.cx,app.ball.cy])
@@ -163,9 +170,9 @@ def isBetweenPoints(app,node1,node2):
 
 #Checks if there is a collision with the wall
 def collisionWithWall(app):
-  if(app.ball.cx+40>app.width or app.ball.cy<0
-    or app.ball.cx-40<0):
+  if(app.ball.cx+40>app.width or app.ball.cx-40<0):
     return True
+  return False
 
 
 ########################################################################
@@ -291,12 +298,15 @@ def toggleDifficulty(app):
   if(app.difficulty=="Easy"):
     app.difficulty="Medium"
     app.gravity=2.3
+    app.bounceSpeed=1.2
   elif(app.difficulty=="Medium"):
     app.difficulty="Hard"
-    app.gravity=3.1
+    app.gravity=5.2
+    app.bounceSpeed=1.4
   elif(app.difficulty=="Hard"):
     app.difficulty="Easy"
     app.gravity=1.2
+    app.bounceSpeed=1.5
 
 def toggleBackground(app):
   if(app.background[1]=="Old Trafford"):
@@ -320,8 +330,8 @@ def colideWithWall(app,node1,node2):
     normalizedVec=rotateVector(ballVec,angleOfLine)
     normalizedOutputVec=rotateVector(normalizedVec,2*math.pi-2*angleOfLine)
     outputVec=rotateVector(normalizedOutputVec,-1*angleOfLine)
-    app.ball.dx=int(-1*outputVec[0])
-    app.ball.dy=int(-1*outputVec[1])
+    app.ball.dx=int(-1*outputVec[0])*app.bounceSpeed
+    app.ball.dy=int(-1*outputVec[1])*app.bounceSpeed
 
 #Used in calculating the return vector angle
 def rotateVector(vector,angle):

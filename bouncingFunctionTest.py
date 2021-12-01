@@ -1,3 +1,4 @@
+#This file is meant to test the algorithm for bouncing a ball on an angled surface
 from cmu_112_graphics import *
 import random,math
 import numpy as np
@@ -34,7 +35,7 @@ def timerFired(app):
     if(app.ball.cy>app.height):
         app.ball=Ball(cx=randomIndex,cy=30)
     moveBall(app)
-    printAngleOfBall(app)
+    # printAngleOfBall(app)
 
 def printAngleOfBall(app):
     angle=math.degrees(findAngle((0,0),(app.ball.dx,app.ball.dy)))
@@ -100,7 +101,7 @@ def colideWithWall(app):
 def rotateVector(vector,angle):
     rotationArray=np.array([[math.cos(angle),-1*math.sin(angle)],[math.sin(angle),math.cos(angle)]])
     newVec=np.matmul(rotationArray,vector)
-    print(f"originalVec={vector} \n newVec={newVec} \n angle={angle}")
+    # print(f"originalVec={vector} \n newVec={newVec} \n angle={angle}")
     return newVec
 
 def findAngle(point1,point2):

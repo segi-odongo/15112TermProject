@@ -1,2 +1,3 @@
 # 15112TermProject
-This project is for my 15-112 (Foundations of Computer Programming) class. This project impliments openCV in order to map a users body on to a 2d screen and allow them to juggle a soccer ball. This is designed entirely in python and tkinter.The most algorithmically complex parts of this project involve the 
+This project is for my 15-112 (Foundations of Computer Programming) class. This project impliments openCV in order to map a users body on to a 2d screen and allow them to juggle a soccer ball. This is designed entirely in python and tkinter.
+In order to run this file you just need to run it in any IDE. However, you need to have openCV installed (pip3 install opencv-python) and have mediapipe installed (pip3 install mediapipe). (Note you also need numpy installed but its included in the install of mediapipe and openCV)

@@ -1,3 +1,4 @@
+#This file is meant to test the openCV display and make sure it runs smooth
 import cv2
 import mediapipe as mp
 import multiprocessing
